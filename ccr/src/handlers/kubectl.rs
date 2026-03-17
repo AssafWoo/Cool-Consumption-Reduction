@@ -17,7 +17,7 @@ impl Handler for KubectlHandler {
     fn filter(&self, output: &str, args: &[String]) -> String {
         let subcmd = args.get(1).map(|s| s.as_str()).unwrap_or("");
         match subcmd {
-            "get" => util::compact_table(output, &[0, 1, 4]),
+            "get" => util::compact_table(output, &[0, 1, 2, 4]),
             "logs" => filter_logs(output),
             "describe" => filter_describe(output),
             "apply" | "delete" | "rollout" => filter_changes(output),
@@ -27,15 +27,6 @@ impl Handler for KubectlHandler {
 }
 
 fn filter_logs(output: &str) -> String {
-    let is_hard_keep = |line: &str| -> bool {
-        let l = line.to_lowercase();
-        l.contains("error")
-            || l.contains("panic")
-            || l.contains("fatal")
-            || l.contains("exception")
-            || l.contains("failed")
-    };
-
     let lines: Vec<&str> = output.lines().collect();
     let non_empty: Vec<(usize, &str)> = lines
         .iter()
@@ -57,7 +48,7 @@ fn filter_logs(output: &str) -> String {
             let mut kept_embeddings: Vec<Vec<f32>> = Vec::new();
 
             for (pos, (orig_idx, line)) in non_empty.iter().enumerate() {
-                if is_hard_keep(line) {
+                if util::is_hard_keep(line) {
                     kept_indices.push(*orig_idx);
                     kept_embeddings.push(embeddings[pos].clone());
                     continue;

@@ -1,4 +1,5 @@
 pub mod aws;
+pub mod brew;
 pub mod cargo;
 pub mod curl;
 pub mod diff;
@@ -8,12 +9,16 @@ pub mod eslint;
 pub mod find;
 pub mod gh;
 pub mod git;
+pub mod go;
 pub mod grep;
+pub mod helm;
 pub mod jest;
+pub mod journalctl;
 pub mod jq;
 pub mod kubectl;
 pub mod ls;
 pub mod make;
+pub mod maven;
 pub mod npm;
 pub mod pip;
 pub mod psql;
@@ -72,6 +77,13 @@ pub fn get_handler(cmd: &str) -> Option<Box<dyn Handler>> {
         "diff" => Some(Box::new(diff::DiffHandler)),
         "jq" => Some(Box::new(jq::JqHandler)),
         "env" | "printenv" => Some(Box::new(env::EnvHandler)),
+        // Batch 5: High-priority new handlers
+        "go" => Some(Box::new(go::GoHandler)),
+        "mvn" => Some(Box::new(maven::MavenHandler)),
+        "gradle" | "./gradlew" | "gradlew" => Some(Box::new(maven::GradleHandler)),
+        "brew" => Some(Box::new(brew::BrewHandler)),
+        "helm" => Some(Box::new(helm::HelmHandler)),
+        "journalctl" => Some(Box::new(journalctl::JournalctlHandler)),
         _ => None,
     }
 }

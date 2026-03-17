@@ -50,8 +50,17 @@ impl Handler for EslintHandler {
             if t.starts_with("✖") {
                 continue;
             }
-            // File path line (not indented, contains path separators)
-            if !line.starts_with(' ') && (t.contains('/') || t.contains('\\') || t.ends_with(".js") || t.ends_with(".ts") || t.ends_with(".tsx") || t.ends_with(".jsx")) {
+            // File path line: not indented, non-empty, not a summary/symbol line.
+            // ESLint always prints file paths flush-left before their error lines.
+            if !line.starts_with(' ')
+                && !t.is_empty()
+                && !t.starts_with('✖')
+                && !t.starts_with('✓')
+                && !t.starts_with('⚠')
+                && !t.contains(" problems")
+                && !t.contains(" warnings")
+                && !t.contains(" errors")
+            {
                 // Flush previous
                 if file_has_errors {
                     if let Some(ref f) = current_file {

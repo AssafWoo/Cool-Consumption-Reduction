@@ -38,19 +38,6 @@ impl Handler for DockerHandler {
 /// Semantic deduplication using BERT embeddings.
 /// Falls back to exact-match dedup if BERT unavailable.
 fn semantic_dedup(lines: &[&str]) -> Vec<String> {
-    // Hard-keep lines: errors, stack traces, first 5 and last 5
-    let is_hard_keep = |line: &str| -> bool {
-        let l = line.to_lowercase();
-        l.contains("error")
-            || l.contains("panic")
-            || l.contains("fatal")
-            || l.contains("exception")
-            || l.contains("failed")
-            || l.contains("stack trace")
-            || l.contains("caused by")
-            || l.contains("at ")
-    };
-
     // Try BERT dedup
     let non_empty: Vec<(usize, &str)> = lines
         .iter()
@@ -73,7 +60,7 @@ fn semantic_dedup(lines: &[&str]) -> Vec<String> {
 
             for (pos, (orig_idx, line)) in non_empty.iter().enumerate() {
                 // Always keep hard-keep lines
-                if is_hard_keep(line) {
+                if util::is_hard_keep(line) {
                     kept_indices.push(*orig_idx);
                     kept_embeddings.push(embeddings[pos].clone());
                     continue;

@@ -1,10 +1,22 @@
+use super::util;
 use super::Handler;
 
 pub struct AwsHandler;
 
+// Subcommands that return structured JSON output and accept --output json.
+// S3 transfer commands, configure, and help do not.
+const JSON_SUBCMDS: &[&str] = &[
+    "ec2", "ecs", "eks", "lambda", "s3api", "iam", "rds", "elb", "elbv2",
+    "cloudformation", "cloudwatch", "sns", "sqs", "sts", "ssm", "secretsmanager",
+    "route53", "logs", "dynamodb", "kinesis", "glue", "emr", "athena",
+];
+
 impl Handler for AwsHandler {
     fn rewrite_args(&self, args: &[String]) -> Vec<String> {
-        if !args.iter().any(|a| a == "--output") {
+        let subcmd = args.get(1).map(|s| s.as_str()).unwrap_or("");
+        let should_inject = JSON_SUBCMDS.contains(&subcmd)
+            && !args.iter().any(|a| a == "--output");
+        if should_inject {
             let mut out = args.to_vec();
             out.push("--output".to_string());
             out.push("json".to_string());
@@ -18,7 +30,9 @@ impl Handler for AwsHandler {
         let action = args.get(2).map(|s| s.as_str()).unwrap_or("");
 
         // Always preserve errors
-        if output.trim_start().starts_with("An error") || output.contains("Error") && output.contains("Code") {
+        if output.trim_start().starts_with("An error")
+            || (output.contains("Error") && output.contains("Code"))
+        {
             return output.to_string();
         }
 
@@ -30,7 +44,7 @@ impl Handler for AwsHandler {
         let trimmed = output.trim();
         if trimmed.starts_with('{') || trimmed.starts_with('[') {
             if let Ok(v) = serde_json::from_str::<serde_json::Value>(trimmed) {
-                let schema = json_to_schema(&v);
+                let schema = util::json_to_schema(&v);
                 let schema_str = serde_json::to_string_pretty(&schema).unwrap_or_default();
                 if schema_str.len() < trimmed.len() {
                     return schema_str;
@@ -43,8 +57,8 @@ impl Handler for AwsHandler {
 }
 
 fn filter_s3_ls(output: &str) -> String {
-    // Group by prefix, show count + total size
-    let mut prefixes: std::collections::HashMap<String, (usize, u64)> = std::collections::HashMap::new();
+    let mut prefixes: std::collections::HashMap<String, (usize, u64)> =
+        std::collections::HashMap::new();
     let mut loose_count = 0usize;
     let mut loose_size = 0u64;
 
@@ -53,13 +67,11 @@ fn filter_s3_ls(output: &str) -> String {
         if t.is_empty() {
             continue;
         }
-        // Directory prefix: "                           PRE some-prefix/"
         if t.starts_with("PRE ") {
             let prefix = t[4..].trim().to_string();
             prefixes.entry(prefix).or_insert((0, 0));
             continue;
         }
-        // File entry: "2023-01-01 00:00:00      12345 filename"
         let parts: Vec<&str> = t.split_whitespace().collect();
         if parts.len() >= 4 {
             if let Ok(size) = parts[2].parse::<u64>() {
@@ -85,29 +97,5 @@ fn filter_s3_ls(output: &str) -> String {
     } else {
         out.sort();
         out.join("\n")
-    }
-}
-
-fn json_to_schema(v: &serde_json::Value) -> serde_json::Value {
-    match v {
-        serde_json::Value::Object(map) => {
-            let schema_map: serde_json::Map<String, serde_json::Value> = map
-                .iter()
-                .map(|(k, val)| (k.clone(), json_to_schema(val)))
-                .collect();
-            serde_json::Value::Object(schema_map)
-        }
-        serde_json::Value::Array(arr) => {
-            if arr.is_empty() {
-                serde_json::json!(["array(0 items)"])
-            } else {
-                let first_schema = json_to_schema(&arr[0]);
-                serde_json::json!([first_schema, format!("[{} items total]", arr.len())])
-            }
-        }
-        serde_json::Value::String(_) => serde_json::Value::String("string".to_string()),
-        serde_json::Value::Number(_) => serde_json::Value::String("number".to_string()),
-        serde_json::Value::Bool(_) => serde_json::Value::String("boolean".to_string()),
-        serde_json::Value::Null => serde_json::Value::String("null".to_string()),
     }
 }

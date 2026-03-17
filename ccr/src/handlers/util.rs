@@ -176,6 +176,46 @@ fn filter_vitest(output: &str) -> String {
     }
 }
 
+/// Returns true if a log line should always be kept regardless of semantic similarity.
+pub fn is_hard_keep(line: &str) -> bool {
+    let l = line.to_lowercase();
+    l.contains("error")
+        || l.contains("panic")
+        || l.contains("fatal")
+        || l.contains("exception")
+        || l.contains("failed")
+        || l.contains("stack trace")
+        || l.contains("caused by")
+        || l.contains("critical")
+        || l.contains("alert")
+        || l.contains("emergency")
+}
+
+/// Derive a schema from a JSON value: replace leaf values with their type names.
+pub fn json_to_schema(v: &serde_json::Value) -> serde_json::Value {
+    match v {
+        serde_json::Value::Object(map) => {
+            let schema_map: serde_json::Map<String, serde_json::Value> = map
+                .iter()
+                .map(|(k, val)| (k.clone(), json_to_schema(val)))
+                .collect();
+            serde_json::Value::Object(schema_map)
+        }
+        serde_json::Value::Array(arr) => {
+            if arr.is_empty() {
+                serde_json::json!(["array(0 items)"])
+            } else {
+                let first_schema = json_to_schema(&arr[0]);
+                serde_json::json!([first_schema, format!("[{} items total]", arr.len())])
+            }
+        }
+        serde_json::Value::String(_) => serde_json::Value::String("string".to_string()),
+        serde_json::Value::Number(_) => serde_json::Value::String("number".to_string()),
+        serde_json::Value::Bool(_) => serde_json::Value::String("boolean".to_string()),
+        serde_json::Value::Null => serde_json::Value::String("null".to_string()),
+    }
+}
+
 /// Cosine similarity between two float vectors.
 pub fn cosine_similarity(a: &[f32], b: &[f32]) -> f32 {
     let dot: f32 = a.iter().zip(b.iter()).map(|(x, y)| x * y).sum();
