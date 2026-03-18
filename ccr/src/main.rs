@@ -141,6 +141,14 @@ jq -n --argjson updated "$UPDATED_INPUT" \
     println!("CCR hooks installed:");
     println!("  PostToolUse: {} → {}", ccr_hook_cmd, settings_path.display());
     println!("  PreToolUse:  {} → {}", ccr_rewrite_cmd, settings_path.display());
+
+    // Pre-download the BERT model now so it's ready before the first Claude session.
+    println!();
+    if let Err(e) = ccr_core::summarizer::preload_model() {
+        eprintln!("warning: could not pre-load BERT model: {e}");
+        eprintln!("         it will download automatically on first use.");
+    }
+
     Ok(())
 }
 

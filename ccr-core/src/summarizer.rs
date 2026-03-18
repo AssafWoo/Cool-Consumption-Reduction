@@ -13,13 +13,54 @@ fn critical_pattern() -> &'static Regex {
 
 static MODEL_CACHE: OnceCell<fastembed::TextEmbedding> = OnceCell::new();
 
+/// Sentinel file written after a successful model load/download.
+/// Its presence means the ~90 MB model files are already on disk.
+fn bert_sentinel() -> Option<std::path::PathBuf> {
+    std::env::var("HOME").ok().map(|h| {
+        std::path::PathBuf::from(h)
+            .join(".local")
+            .join("share")
+            .join("ccr")
+            .join(".bert_ready")
+    })
+}
+
+fn bert_is_cached() -> bool {
+    bert_sentinel().map(|p| p.exists()).unwrap_or(false)
+}
+
+fn mark_bert_cached() {
+    if let Some(path) = bert_sentinel() {
+        if let Some(parent) = path.parent() {
+            let _ = std::fs::create_dir_all(parent);
+        }
+        let _ = std::fs::write(path, "");
+    }
+}
+
 fn get_model() -> anyhow::Result<&'static fastembed::TextEmbedding> {
     MODEL_CACHE.get_or_try_init(|| {
         use fastembed::{EmbeddingModel, InitOptions, TextEmbedding};
-        TextEmbedding::try_new(
+
+        if !bert_is_cached() {
+            eprintln!("[ccr] downloading BERT model (~90 MB, one-time setup)...");
+            eprintln!("[ccr] this may take a minute. future runs are instant.");
+        }
+
+        let model = TextEmbedding::try_new(
             InitOptions::new(EmbeddingModel::AllMiniLML6V2).with_show_download_progress(false),
-        )
+        )?;
+
+        mark_bert_cached();
+        Ok(model)
     })
+}
+
+/// Pre-warm the BERT model — downloads and caches it if not already present.
+/// Called by `ccr init` so the download happens at setup time, not mid-session.
+pub fn preload_model() -> anyhow::Result<()> {
+    get_model()?;
+    Ok(())
 }
 
 // ── Math helpers ──────────────────────────────────────────────────────────────
