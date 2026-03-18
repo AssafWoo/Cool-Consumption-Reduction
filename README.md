@@ -62,7 +62,7 @@ Claude issues: some-unknown-tool
 ### One-liner (macOS + Linux)
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/AssafWoo/Cool-Consumption-Recduction/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/AssafWoo/Cool-Consumption-Reduction/main/install.sh | bash
 ```
 
 Downloads the pre-built binary for your platform, installs to `~/.local/bin/ccr`, and runs `ccr init` to register the Claude Code hooks.
@@ -76,7 +76,7 @@ export PATH="$HOME/.local/bin:$PATH"   # add to ~/.zshrc or ~/.bashrc
 ### From source
 
 ```bash
-git clone https://github.com/AssafWoo/Cool-Consumption-Recduction.git && cd Cool-Consumption-Recduction
+git clone https://github.com/AssafWoo/Cool-Consumption-Reduction.git && cd Cool-Consumption-Reduction
 cargo build --release
 cp target/release/ccr ~/.local/bin/
 ccr init
@@ -614,7 +614,7 @@ rm ~/.claude/hooks/ccr-rewrite.sh
 
 ## Contributing
 
-Contributions welcome — open an issue or PR on [GitHub](https://github.com/AssafWoo/Cool-Consumption-Recduction).
+Contributions welcome — open an issue or PR on [GitHub](https://github.com/AssafWoo/Cool-Consumption-Reduction).
 
 To add a new handler: implement the `Handler` trait and register it in `get_handler()` in `ccr/src/handlers/mod.rs`. See any existing handler (e.g. `git.rs`) as a template.
 
