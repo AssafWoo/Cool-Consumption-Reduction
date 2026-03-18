@@ -591,3 +591,35 @@ ccr-eval/                Evaluation suite
 config/
   default_filters.toml   Embedded default config (git, cargo, npm, docker patterns)
 ```
+
+---
+
+## Uninstall
+
+```bash
+# Remove the binary
+rm ~/.local/bin/ccr
+
+# Remove hooks from Claude Code settings
+# Open ~/.claude/settings.json and delete the two CCR entries under
+# hooks.PostToolUse and hooks.PreToolUse
+
+# Remove cached data (optional)
+rm -rf ~/.local/share/ccr
+rm -rf ~/.local/share/ccr/.bert_ready
+rm ~/.claude/hooks/ccr-rewrite.sh
+```
+
+---
+
+## Contributing
+
+Contributions welcome — open an issue or PR on [GitHub](https://github.com/AssafWoo/Cool-Consumption-Recduction).
+
+To add a new handler: implement the `Handler` trait and register it in `get_handler()` in `ccr/src/handlers/mod.rs`. See any existing handler (e.g. `git.rs`) as a template.
+
+---
+
+## License
+
+MIT — see [LICENSE](LICENSE) for details.
