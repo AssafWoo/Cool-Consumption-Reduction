@@ -54,21 +54,39 @@ Claude issues: some-unknown-tool
 
 ## Installation
 
+### One-liner (macOS + Linux)
+
 ```bash
-git clone <repo> && cd ccr
+curl -fsSL https://raw.githubusercontent.com/AssafWoo/Cool-Consumption-Recduction-CCR-/main/install.sh | bash
+```
+
+Downloads the pre-built binary for your platform, installs to `~/.local/bin/ccr`, and runs `ccr init` to register the Claude Code hooks.
+
+Make sure `~/.local/bin` is on your PATH:
+
+```bash
+export PATH="$HOME/.local/bin:$PATH"   # add to ~/.zshrc or ~/.bashrc
+```
+
+### From source
+
+```bash
+git clone https://github.com/AssafWoo/Cool-Consumption-Recduction-CCR-.git && cd Cool-Consumption-Recduction-CCR-
 cargo build --release
-cp target/release/ccr ~/.local/bin/   # or any directory on PATH
-ccr init                               # registers hooks in ~/.claude/settings.json
+cp target/release/ccr ~/.local/bin/
+ccr init
+```
+
+### Verify
+
+```bash
+ccr run git status    # compact output
+ccr gain              # shows a run recorded
 ```
 
 `ccr init` writes `~/.claude/hooks/ccr-rewrite.sh` (PreToolUse) and merges both hook entries into `settings.json` **without removing existing hooks** from other tools.
 
-Verify:
-
-```bash
-ccr run git status    # should print compact output
-ccr gain              # should show a run recorded
-```
+> **First run note:** CCR downloads the BERT model (~90 MB, `all-MiniLM-L6-v2`) from HuggingFace on first use and caches it at `~/.cache/huggingface/`. Subsequent runs are instant.
 
 ---
 
