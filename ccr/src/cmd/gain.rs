@@ -36,8 +36,8 @@ fn resolve_price() -> (f64, String) {
         }
     }
 
-    // 3. Fallback: Sonnet 4.6
-    (3.00 / 1_000_000.0, "$3.00/1M (Sonnet 4.6 default — set ANTHROPIC_MODEL or cost_per_million_tokens in ccr.toml to adjust)".to_string())
+    // 3. Fallback
+    (3.00 / 1_000_000.0, "$3.00/1M (set ANTHROPIC_MODEL to auto-detect)".to_string())
 }
 
 pub fn run(history: bool, days: u32) -> Result<()> {
