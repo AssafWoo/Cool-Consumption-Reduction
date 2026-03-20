@@ -10,6 +10,7 @@
 - [Installation](#installation)
 - [Commands](#commands)
 - [Handlers](#handlers)
+- [BERT Pipeline](#bert-pipeline)
 - [Configuration](#configuration)
 - [Session Intelligence](#session-intelligence)
 - [Hook Architecture](#hook-architecture)
@@ -228,6 +229,42 @@ When savings exceed 60%, the raw output is saved to `~/.local/share/ccr/tee/<ts>
 | **cat** | `cat` | ~70% | ≤100 lines: pass through. 101–500: head/tail. >500: BERT. |
 | **grep / rg** | `grep`, `rg` | ~80% | Groups by file, truncates lines, caps at 50 matches. |
 | **find** | `find` | ~78% | Strips common prefix, groups by directory, caps at 50. |
+
+---
+
+## BERT Pipeline
+
+CCR uses [`all-MiniLM-L6-v2`](https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2) (384-dim sentence embeddings, ~90 MB, downloaded once on first use via `fastembed`). Every line of output is embedded and scored; only the most informative lines are kept.
+
+### Scoring
+
+Base score: `1 - cosine_similarity(line_embedding, centroid)` — outliers score high, repetitive boilerplate scores low. Lines matching error/warning/panic patterns are **hard-kept** regardless of score.
+
+The score is blended with a query when context is available:
+
+```
+final_score = 0.5 × anomaly_score + 0.5 × cosine_similarity(line, query_embedding)
+```
+
+The query comes from Claude's last assistant message (intent extraction) — so lines relevant to what Claude is currently working on rank higher than generic outliers.
+
+### Passes
+
+All seven passes run in sequence on every compressed output:
+
+| Pass | What it does |
+|------|-------------|
+| **Noise pre-filter** | Removes project-specific boilerplate promoted by noise learning, before BERT runs |
+| **Semantic clustering** | Near-identical lines (cosine > 0.85) collapse to one representative + `[N similar]` |
+| **Entropy budget** | Samples embeddings to measure output diversity; uniform output (progress bars, install logs) gets a tight token budget automatically |
+| **Anomaly scoring** | Scores each line against the centroid + intent query; keeps top-N by score |
+| **Contextual anchors** | After selection, re-adds the nearest semantic neighbors of each kept line (e.g. the function signature above an error) |
+| **Historical centroid** | Scores anomaly against a rolling mean of prior runs of the same command — genuinely new output stands out more than first-run spikes |
+| **Delta compression** | Compares against previous run of same command; suppresses unchanged lines, surfaces new ones with `[Δ from turn N: +M new, K repeated]` |
+
+### Fallback
+
+If the model is unavailable or output is short (< `summarize_threshold_lines`), CCR falls back to head + tail. No crash, no empty output.
 
 ---
 
