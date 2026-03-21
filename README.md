@@ -6,23 +6,44 @@
 
 ## Token Savings
 
-Measured from real `ccr gain` analytics on a Rust project (this repo). Per-invocation averages across recorded runs:
+### Measured — real `ccr gain` data (this repo, small Rust project)
 
-| Operation | In session | Without CCR | With CCR | Savings | Runs |
-|-----------|:----------:|------------:|---------:|:-------:|:----:|
-| `cargo build` | 3× | 9,117 | 297 | **−97%** | 34 |
-| `cargo test` | 3× | 2,262 | 582 | **−74%** | 32 |
-| `read / cat` | 5× | 7,500 | 3,225 | **−57%** | 7 |
-| `rustfmt` | 2× | 4,042 | 1,746 | **−57%** | 2 |
-| `ls` | 5× | 1,290 | 770 | −40% | 14 |
-| `cargo check` | 3× | 696 | 555 | −20% | 10 |
-| `git diff` | 2× | 292 | 166 | −43% | 2 |
-| `git log` | 3× | 633 | 546 | −14% | 6 |
-| `git status` | 5× | 370 | 310 | −16% | 6 |
-| **Session total** | | **~26,200** | **~8,200** | **−69%** | |
+Per-invocation averages from recorded sessions:
 
-> Git savings above reflect a small repo (few files, short history). On larger projects the git handler saves 70–80% via porcelain format injection and diff compression.
->
+| Operation | Freq. | Without CCR | With CCR | Savings |
+|-----------|:-----:|------------:|---------:|:-------:|
+| `cargo build` | 3× | 9,117 | 297 | **−97%** |
+| `cargo test` | 3× | 2,262 | 582 | **−74%** |
+| `read / cat` (small files) | 5× | 7,500 | 3,225 | **−57%** |
+| `rustfmt` | 2× | 4,042 | 1,746 | **−57%** |
+| `Read / Glob (BERT, large files)` | 5× | 1,115 | 470 | **−58%** |
+| `ls` | 5× | 1,290 | 770 | −40% |
+| `cargo check` | 3× | 696 | 555 | −20% |
+| `git diff` | 2× | 292 | 166 | −43% |
+| `git log` | 3× | 633 | 546 | −14% |
+| `git status` | 5× | 370 | 310 | −16% |
+| **Session total** | | **~27,317** | **~8,667** | **−68%** |
+
+> Git savings are low here because this is a tiny repo. See estimates below for real-world numbers.
+
+### Estimated — medium-sized TypeScript / Rust project
+
+Based on handler logic applied to typical real-world command output sizes:
+
+| Operation | Freq. | Without CCR | With CCR | Savings |
+|-----------|:-----:|------------:|---------:|:-------:|
+| `git status` (50+ tracked files) | 10× | 30,000 | 1,600 | **−95%** |
+| `git diff` (feature branch) | 5× | 50,000 | 12,500 | **−75%** |
+| `git log` | 5× | 12,500 | 2,500 | **−80%** |
+| `git add / commit / push` | 8× | 12,800 | 960 | **−93%** |
+| `tsc` / `eslint` | 5× | 15,000 | 1,350 | **−91%** |
+| `npm test` / `vitest` / `jest` | 5× | 25,000 | 3,000 | **−88%** |
+| `cargo test` (large suite) | 5× | 10,000 | 1,500 | **−85%** |
+| `kubectl get` / `docker ps` | 5× | 6,000 | 900 | **−85%** |
+| `curl` (JSON API response) | 3× | 7,500 | 300 | **−96%** |
+| **Session total** | | **~168,800** | **~24,610** | **−85%** |
+
+> Estimates based on medium-sized TypeScript/Rust projects. Actual savings vary by project size.
 > Run `ccr gain` at any time to see your live numbers.
 
 ---
