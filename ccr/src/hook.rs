@@ -46,11 +46,21 @@ pub fn run() -> Result<()> {
 // ── Bash tool handler ─────────────────────────────────────────────────────────
 
 fn process_bash(hook_input: HookInput) -> Result<()> {
-    let command_hint = hook_input
+    let full_cmd = hook_input
         .tool_input
         .get("command")
         .and_then(|v| v.as_str())
-        .and_then(|cmd| cmd.split_whitespace().next())
+        .unwrap_or("");
+
+    // Skip commands that already went through cmd/run.rs or cmd/filter.rs —
+    // those paths record their own analytics and the output is already compressed.
+    if full_cmd.trim_start().starts_with("ccr ") {
+        return Ok(());
+    }
+
+    let command_hint = full_cmd
+        .split_whitespace()
+        .next()
         .map(|s| s.to_string());
 
     let output_text = if let Some(err) = &hook_input.tool_response.error {
@@ -81,11 +91,6 @@ fn process_bash(hook_input: HookInput) -> Result<()> {
     let sid = crate::session::session_id();
     let mut session = crate::session::SessionState::load(&sid);
 
-    let full_cmd = hook_input
-        .tool_input
-        .get("command")
-        .and_then(|v| v.as_str())
-        .unwrap_or("unknown");
     let cmd_key: String = full_cmd
         .split_whitespace()
         .take(2)
@@ -201,11 +206,10 @@ fn process_bash(hook_input: HookInput) -> Result<()> {
     // Record analytics so `ccr gain` reflects hook-path savings.
     let input_tokens = ccr_core::tokens::count_tokens(&output_text);
     let output_tokens = ccr_core::tokens::count_tokens(&final_output);
-    let subcommand = hook_input
-        .tool_input
-        .get("command")
-        .and_then(|v| v.as_str())
-        .and_then(|cmd| cmd.split_whitespace().skip(1).find(|s| !s.starts_with('-')))
+    let subcommand = full_cmd
+        .split_whitespace()
+        .skip(1)
+        .find(|s| !s.starts_with('-'))
         .map(|s| s.to_string());
     let analytics = ccr_core::analytics::Analytics::new(
         input_tokens,
